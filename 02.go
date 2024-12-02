@@ -55,7 +55,7 @@ func main() {
 				break
 			}
 		}
-		if ok2 {
+		if ok2 || ok {
 			cnt2++
 		}
 	}

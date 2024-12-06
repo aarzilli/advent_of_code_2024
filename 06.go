@@ -2,30 +2,21 @@ package main
 
 import (
 	. "aoc/util"
-	"fmt"
 	"os"
 )
 
-func pf(fmtstr string, any ...interface{}) {
-	fmt.Printf(fmtstr, any...)
-}
-
-func pln(any ...interface{}) {
-	fmt.Println(any...)
-}
-
-type pos2 struct {
+type pos struct {
 	i, j int
 }
 
-type pos struct {
-	pos2
+type posdir struct {
+	pos
 	dir int
 }
 
 var M [][]byte
 
-func step(cur *pos) bool {
+func step(cur *posdir) bool {
 	next := *cur
 	switch cur.dir {
 	case 0:
@@ -48,9 +39,9 @@ func step(cur *pos) bool {
 	return false
 }
 
-func isloop(start pos) bool {
+func isloop(start posdir) bool {
 	cur := start
-	seen := make(Set[pos])
+	seen := make(Set[posdir])
 	for {
 		if seen[cur] {
 			return true
@@ -64,30 +55,24 @@ func isloop(start pos) bool {
 
 func main() {
 	lines := Input(os.Args[1], "\n", true)
-	pf("len %d\n", len(lines))
 	M = make([][]byte, len(lines))
-	found := false
-	var cur pos
+	var start posdir
 	for i := range lines {
 		M[i] = []byte(lines[i])
 		for j := range M {
 			if M[i][j] == '^' {
-				cur.i = i
-				cur.j = j
-				cur.dir = 0
+				start.i = i
+				start.j = j
+				start.dir = 0
 				M[i][j] = '.'
-				found = true
 			}
 		}
 	}
-	if !found {
-		panic("blah")
-	}
-	start := cur
+	cur := start
 
-	seen := make(Set[pos2])
+	seen := make(Set[pos])
 	for {
-		seen[cur.pos2] = true
+		seen[cur.pos] = true
 		if step(&cur) {
 			break
 		}
@@ -100,7 +85,6 @@ func main() {
 		for j := range M[i] {
 			if M[i][j] == '.' {
 				cnt++
-				pln(cnt, len(M)*len(M[0]))
 				M[i][j] = '#'
 				il := isloop(start)
 				if il {

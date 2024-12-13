@@ -1,0 +1,4 @@
+Minimize[{ 3a+b, 94a+22b == 8400 && 34a+67b == 5400 }, {a, b}, Integers]
+Minimize[{ 3a+b, 26a+67b == 12748 && 66a+21b == 12176 }, {a, b}, Integers]
+Minimize[{ 3a+b, 17a+84b == 7870 && 86a+37b == 6450 }, {a, b}, Integers]
+Minimize[{ 3a+b, 69a+27b == 18641 && 23a+71b == 10279 }, {a, b}, Integers]

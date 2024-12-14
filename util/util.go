@@ -178,6 +178,11 @@ func Sol(v ...interface{}) {
 	cmd := exec.Command("xclip", "-in", "-selection", "-primary")
 	cmd.Stdin = bytes.NewReader([]byte(fmt.Sprintf("%v", v[len(v)-1])))
 	cmd.Run()
+	if len(v) == 2 {
+		if v[0] != v[1] {
+			panic("different")
+		}
+	}
 	part++
 }
 
@@ -275,4 +280,8 @@ func (s Set[T]) AddSet(s2 Set[T]) {
 	for x := range s2 {
 		s[x] = true
 	}
+}
+
+func Pln(any ...interface{}) {
+	fmt.Println(any...)
 }

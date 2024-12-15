@@ -10,11 +10,40 @@ type pos struct {
 	i, j int
 }
 
+var debug = false
+
 var M [][]byte
 
 func main() {
-	groups := Input(os.Args[1], "\n\n", true)
-	Pf("len %d\n", len(groups))
+	if len(os.Args) < 2 {
+		for _, t := range []struct {
+			fname  string
+			p1, p2 int
+		}{
+			{"15.example", 10092, 9021},
+			{"15.example2", 2028, -1},
+			{"15.example3", 908, 618},
+			{"15.txt", 1485257, 1475512},
+		} {
+			p1, p2 := solve(t.fname)
+			Pln(t.fname, p1, p2)
+			if t.p1 != -1 && p1 != t.p1 {
+				panic("wrong part 1")
+			}
+			if t.p2 != -1 && p2 != t.p2 {
+				panic("wrong part 2")
+			}
+		}
+		return
+	}
+	debug = true
+	part1, part2 := solve(os.Args[1])
+	Sol(part1)
+	Sol(part2)
+}
+
+func solve(fname string) (int, int) {
+	groups := Input(fname, "\n\n", true)
 
 	lines := Noempty(Spac(groups[0], "\n", -1))
 
@@ -25,16 +54,14 @@ func main() {
 	instrs := []byte(strings.ReplaceAll(groups[1], "\n", ""))
 	cur = run(instrs, cur, false)
 
-	//showmap(cur)
-
-	Sol(score())
+	part1 := score()
 
 	reinit2(&cur, lines)
 
-	showmap(cur)
 	cur = run(instrs, cur, true)
-	showmap(cur)
-	Sol(score())
+	part2 := score()
+
+	return part1, part2
 }
 
 func reinit1(cur *pos, lines []string) {
@@ -73,6 +100,10 @@ func reinit2(cur *pos, lines []string) {
 
 func run(instrs []byte, cur pos, part2 bool) pos {
 	for _, instr := range instrs {
+		if part2 && debug {
+			showmap(cur)
+			Pln("moving", string(instr))
+		}
 		var dir pos
 		switch instr {
 		case '<':
@@ -89,15 +120,14 @@ func run(instrs []byte, cur pos, part2 bool) pos {
 
 		next := addpos(cur, dir)
 
-		if !part2 {
+		if !part2 || instr == '<' || instr == '>' {
 			if pushto(next, dir, '.') {
 				cur = next
 			}
 		} else {
-			if pushto1(next, dir) {
+			if pushto1(next, dir.i) {
 				cur = next
 			}
-			//showmap(cur)
 		}
 	}
 	return cur
@@ -114,8 +144,8 @@ func pushto(p, dir pos, item byte) bool {
 	case '.':
 		M[p.i][p.j] = item
 		return true
-	case 'O':
-		r := pushto(addpos(p, dir), dir, 'O')
+	case 'O', '[', ']':
+		r := pushto(addpos(p, dir), dir, M[p.i][p.j])
 		if r {
 			M[p.i][p.j] = item
 		}
@@ -125,7 +155,7 @@ func pushto(p, dir pos, item byte) bool {
 	}
 }
 
-func pushto1(p, dir pos) bool {
+func pushto1(p pos, dir int) bool {
 	switch M[p.i][p.j] {
 	case '#':
 		return false
@@ -133,44 +163,10 @@ func pushto1(p, dir pos) bool {
 		return true
 	default:
 		if box := isbox(p); box != nil {
-			needtomove := make(Set[[2]pos])
-			needtomove[*box] = true
-			r := pushto2(addbox(*box, dir), dir, needtomove, *box)
+			r := pushto2(addbox(*box, dir), dir, false)
 			if r {
-				//Pln("moving shit")
-				for len(needtomove) > 0 {
-					for p := range needtomove {
-						n1, n2 := addpos(p[0], dir), addpos(p[1], dir)
-						if dir == (pos{+1, 0}) || dir == (pos{-1, 0}) {
-							if isempty(n1) && isempty(n2) {
-								M[p[0].i][p[0].j] = '.'
-								M[p[1].i][p[1].j] = '.'
-								M[n1.i][n1.j] = '['
-								M[n2.i][n2.j] = ']'
-								delete(needtomove, p)
-							}
-						} else if dir == (pos{0, -1}) {
-							if isempty(n1) {
-								M[p[0].i][p[0].j] = '.'
-								M[p[1].i][p[1].j] = '.'
-								M[n1.i][n1.j] = '['
-								M[n2.i][n2.j] = ']'
-								delete(needtomove, p)
-							}
-						} else if dir == (pos{0, +1}) {
-							if isempty(n2) {
-								M[p[0].i][p[0].j] = '.'
-								M[p[1].i][p[1].j] = '.'
-								M[n1.i][n1.j] = '['
-								M[n2.i][n2.j] = ']'
-								delete(needtomove, p)
-							}
-						} else {
-							panic("blah")
-						}
-					}
-				}
-				//Pln("done")
+				fill(*box, false)
+				pushto2(addbox(*box, dir), dir, true)
 			}
 			return r
 		} else {
@@ -179,45 +175,49 @@ func pushto1(p, dir pos) bool {
 	}
 }
 
-func isempty(p pos) bool {
-	return M[p.i][p.j] == '.'
+func fill(box [2]pos, v bool) {
+	if v {
+		M[box[0].i][box[0].j] = '['
+		M[box[1].i][box[1].j] = ']'
+	} else {
+		M[box[0].i][box[0].j] = '.'
+		M[box[1].i][box[1].j] = '.'
+	}
 }
 
-func pushto2(dst [2]pos, dir pos, needtomove Set[[2]pos], curbox [2]pos) bool {
-	//Pln(dst, dir)
-	p1 := dst[0]
-	p2 := dst[1]
-	if M[p1.i][p1.j] == '#' || M[p2.i][p2.j] == '#' {
+func pushto2(dst [2]pos, dir int, exec bool) bool {
+	if M[dst[0].i][dst[0].j] == '#' || M[dst[1].i][dst[1].j] == '#' {
 		return false
 	}
 
-	if M[p1.i][p1.j] == '.' && M[p2.i][p2.j] == '.' {
-		return true
+	m := make(Set[[2]pos])
+	for _, p := range dst {
+		if box := isbox(p); box != nil {
+			m[*box] = true
+		}
 	}
 
-	var r1, r2 bool
-
-	if box := isbox(p1); box != nil && *box != curbox {
-		//Pln("moving first", box)
-		needtomove[*box] = true
-		r1 = pushto2(addbox(*box, dir), dir, needtomove, *box)
-	} else {
-		r1 = true
+	ok := true
+	for box := range m {
+		if exec {
+			fill(box, false)
+		}
+		r1 := pushto2(addbox(box, dir), dir, exec)
+		if !r1 {
+			ok = false
+			break
+		}
 	}
 
-	if box := isbox(p2); box != nil && *box != curbox {
-		//Pln("moving second", box)
-		needtomove[*box] = true
-		r2 = pushto2(addbox(*box, dir), dir, needtomove, *box)
-	} else {
-		r2 = true
+	if exec {
+		fill(dst, true)
 	}
 
-	return r1 && r2
+	return ok
 }
 
-func addbox(box [2]pos, dir pos) [2]pos {
-	return [2]pos{addpos(box[0], dir), addpos(box[1], dir)}
+func addbox(box [2]pos, dir int) [2]pos {
+	return [2]pos{addpos(box[0], pos{ dir, 0 }), addpos(box[1], pos{ dir, 0 })}
 }
 
 func showmap(cur pos) {

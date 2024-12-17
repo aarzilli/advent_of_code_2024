@@ -1,0 +1,13 @@
+bst,4 // b = a % 8
+bxl,6 // b1 = b ^ 6 = ((a%8)^6)
+cdv,5 // c = a / (2**b1)
+bxc,4 // b2 = b1^c
+bxl,7 // b3 = b2^7 
+adv,3 // a = a / (2**3) = a/8
+out,5 // output(b3)
+jnz,0
+
+while a != 0 {
+}
+
+Vogliamo un numero di 16*3 = 48 bit

@@ -37,51 +37,26 @@ var arrowpad = map[byte]pos{
 
 func main() {
 	lines := Input(os.Args[1], "\n", true)
-	Pf("len %d\n", len(lines))
-	//Pf("%q\n", allmoves('N', '7', 'A'))
-	//Pf("%q\n", codesfor('N', "029A"))
-	
+
 	part1 := 0
+	part2 := 0
 	for _, line := range lines {
 		num := Atoi(line[:len(line)-1])
-		l := multilevellen(line)
-		//l2 := multilevellenold(line)
-		Pln(num, l)
+		l := multilevellen(3, line)
+		l2 := multilevellen(26, line)
 		part1 += num * l
+		part2 += num * l2
 	}
 	Sol(part1)
+	Sol(part2)
 }
 
-const DIFFICULTY = 26
-//const DIFFICULTY = 3
-
-// part1 example: 126384
-// part1 real: 270084
-
-// part2 wrong: 154115708116294 (too low)
-// part2 wrong: 61952932092390 (too low)
-
-func multilevellenold(s string) int {
-	combos := multilevel(s)
-	min := -1
-	mincombo := ""
-	for k := range combos {
-		if min < 0 || len(k) < min {
-			min = len(k)
-			mincombo = k
-		}
-	}
-	Pln("multilevellenold", s, mincombo)
-	return min
-}
-
-func multilevellen(s string) int {
+func multilevellen(difficulty int, s string) int {
 	cur := byte('A')
 	r := 0
 	for i := range s {
 		ch := s[i]
-		n := multilevellen1('N', DIFFICULTY, cur, ch)
-		//Pln(string(cur), string(ch), n)
+		n := multilevellen1('N', difficulty, cur, ch)
 		r += n
 		cur = ch
 	}
@@ -97,7 +72,6 @@ func multilevellen1(padkind byte, n int, start, end byte) int {
 		return r
 	}
 	r = multilevellen1real(padkind, n, start, end)
-	//Pln("multilevellen1real", string(padkind), n, "from:", string(start), "to:", string(end), "minsteps:", r)
 	multilevellen1memomap[k] = r
 	return r
 }
@@ -106,9 +80,9 @@ func multilevellen1real(padkind byte, n int, start, end byte) int {
 	if n == 0 {
 		return 1
 	}
-	
+
 	moves := allmoves(padkind, start, end)
-	
+
 	min := -1
 	for _, move := range moves {
 		cur := byte('A')
@@ -123,109 +97,6 @@ func multilevellen1real(padkind byte, n int, start, end byte) int {
 		}
 	}
 	return min
-}
-
-/*func multilevellen1(start, end byte) int {
-	k := fmt.Sprintf("%c%c", start, end)
-	r, ok := multilevellen1memomap[k]
-	if ok {
-		return r
-	}
-	r = multilevellen1real(start, end)
-	multilevellen1memomap[k] = r
-	return r
-}
-
-func multilevellen1real(start, end byte) int {
-	combos := make(Set[string])
-	combos[string(end)] = true
-	for i := 0; i < 3; i++ {
-		ncombos := make(Set[string])
-		padkind := byte('N')
-		s := start
-		if i > 0 {
-			padkind = 'A'
-			s = 'A'
-		}
-		for combo := range combos {
-			r := codesfor(padkind, s, combo)
-			for _, p := range r {
-				ncombos[p] = true
-			}
-		}
-		combos = ncombos
-	}
-	min := -1
-	mincombo := ""
-	for k := range combos {
-		if min < 0 || len(k) < min {
-			min = len(k)
-			mincombo = k
-		}
-	}
-	Pln("multilevellen1real", string(start), string(end), mincombo, min)
-	return min
-}*/
-
-func multilevel(s string) Set[string] {
-	curcombos := make(Set[string])
-	curcombos[s] = true
-
-	for i := 0; i < DIFFICULTY; i++ {
-		nextcombos := make(Set[string])
-		padkind := byte('N')
-		if i > 0 {
-			padkind = 'A'
-		}
-		for combo := range curcombos {
-			r := codesfor(padkind, 'A', combo)
-			for _, p := range r {
-				nextcombos[p] = true
-			}
-		}
-		curcombos = nextcombos
-	}
-	return curcombos
-}
-
-var codesformemomap = make(map[string][]string)
-
-func codesfor(padkind, start byte, s string) []string {
-	k := fmt.Sprintf("%c%c%s", padkind, start, s)
-	r, ok := codesformemomap[k]
-	if ok {
-		return r
-	}
-	r = codesforreal(padkind, start, s)
-	codesformemomap[k] = r
-	return r
-}
-
-func codesforreal(padkind, start byte, s string) []string {
-	cur := start
-	r := [][]string{}
-	for i := range s {
-		ch := s[i]
-		r2 := allmoves(padkind, cur, ch)
-		r = append(r, r2)
-		cur = ch
-	}
-	return enumstr(r)
-}
-
-func enumstr(r [][]string) []string {
-	if len(r) == 0 {
-		return []string{""}
-	}
-
-	rr := []string{}
-	for _, step := range r[0] {
-		r2 := enumstr(r[1:])
-		for _, p := range r2 {
-			rr = append(rr, step+p)
-		}
-	}
-	return rr
 }
 
 var allmovesmemomap = make(map[string][]string)
@@ -245,12 +116,7 @@ func allmoves(padkind, start, end byte) []string {
 	default:
 		panic("blah")
 	}
-	r = allmovesreal(pad, start, end)
-	allmovesmemomap[k] = r
-	return r
-}
 
-func allmovesreal(pad map[byte]pos, start, end byte) []string {
 	startp, ok1 := pad[start]
 	endp, ok2 := pad[end]
 
@@ -258,7 +124,9 @@ func allmovesreal(pad map[byte]pos, start, end byte) []string {
 		panic("blah")
 	}
 
-	return enummoves(pad, startp, endp, []byte{})
+	r = enummoves(pad, startp, endp, []byte{})
+	allmovesmemomap[k] = r
+	return r
 }
 
 func enummoves(pad map[byte]pos, startp, endp pos, path []byte) []string {

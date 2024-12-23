@@ -11,7 +11,6 @@ var G = make(map[string]Set[string])
 
 func main() {
 	lines := Input(os.Args[1], "\n", true)
-	Pf("len %d\n", len(lines))
 	for _, line := range lines {
 		v := Spac(line, "-", -1)
 		if G[v[0]] == nil {
@@ -23,8 +22,6 @@ func main() {
 		}
 		G[v[1]][v[0]] = true
 	}
-
-	//seen := make(Set[string])
 
 	part1 := 0
 	for k1 := range G {
@@ -38,7 +35,6 @@ func main() {
 				}
 				if G[k2][k3] && (k1[0] == 't' || k2[0] == 't' || k3[0] == 't') {
 					part1++
-					//Pln(k1, k2, k3)
 				}
 			}
 		}
@@ -62,8 +58,6 @@ func main() {
 			break
 		}
 
-		Pln("new clique from", clique)
-
 		for k := range G {
 			if seen[k] || clique[k] {
 				continue
@@ -76,12 +70,9 @@ func main() {
 				}
 			}
 			if ok {
-				Pln("\tadding", k, "to clique")
 				clique[k] = true
 			}
 		}
-
-		Pln("\tfinal clique", clique)
 
 		if len(clique) > len(maxclique) {
 			maxclique = clique
@@ -95,27 +86,4 @@ func main() {
 	keys := Keys(maxclique)
 	sort.Strings(keys)
 	Sol(strings.Join(keys, ","))
-
-	/*
-		for k1 := range G {
-			if k1[0] != 't' {
-				continue
-			}
-			seen[k1] = true
-			for k2 := range G[k1] {
-				if seen[k2] {
-					continue
-				}
-				for k3 := range G[k1] {
-					if k3 == k2 {
-						continue
-					}
-					if G[k2][k3] {
-						//seen[k2] = true
-						//seen[k3] = true
-						Pln(k1, k2, k3)
-					}
-				}
-			}
-		}*/
 }

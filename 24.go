@@ -55,16 +55,7 @@ func main() {
 		Must(fh.Close())
 	}
 
-	// 45bit + 45bit -> 46bit
-
-	// 122, 10, 136, 170, 105, 48, 193
-
-	//swap(10, 105) // should be 10, 48 probably (but it could also be others)
-
-	//swap(105, 193)
-
-	//fix()
-
+	// calculated by hand
 	swapnames("z08", "vvr")
 	swapnames("bkr", "rnq")
 	swapnames("z28", "tfb")
@@ -138,79 +129,6 @@ func findnodeshape(a1, op, a2 string) *node {
 	panic(fmt.Errorf("could not find node '%s %s %s'", a1, op, a2))
 }
 
-func fix() bool {
-	Pln("FIX ENTERED")
-	defer Pln("FIX EXITING")
-	correct := make(Set[int])
-
-	for curbit := range 45 {
-		zname := fmt.Sprintf("z%02d", curbit)
-		if !check1z(curbit, zname) {
-			Pln("failure at bit", curbit)
-			//TODO: print subgraph of z<i> that could be incorrect
-			candidates := []int{}
-			for i := range subgraph(zname) {
-				if !correct[i] {
-					candidates = append(candidates, i)
-				}
-			}
-
-			if recheckok(curbit) {
-				panic("FUCK")
-			}
-
-			Pln("candidates", candidates)
-
-			for i := range candidates {
-				for j := i + 1; j < len(candidates); j++ {
-					Pln("swapping", candidates[i], candidates[j])
-					swap(candidates[i], candidates[j])
-					recheckout := recheckok(curbit)
-					hasloopout := hasloop()
-					if recheckout && !hasloopout {
-						Pln("trying with swapped", candidates[i], candidates[j])
-						if fix() {
-							return true
-						}
-					} else {
-						Pln("    failed because recheck=", recheckout, "hasloop=", hasloopout)
-					}
-					swap(candidates[i], candidates[j])
-					if recheckok(curbit) {
-						panic("FUCK")
-					}
-				}
-			}
-
-			return false
-		}
-
-		for i := range subgraph(zname) {
-			correct[i] = true
-		}
-	}
-
-	return true
-}
-
-func check1z(i int, zname string) bool {
-	V1, _ := runint(1<<i, 0)
-	ok1 := V1[zname] == 1
-	V2, _ := runint(0, 1<<i)
-	ok2 := V2[zname] == 1
-	return ok1 && ok2
-}
-
-func recheckok(m int) bool {
-	for i := 0; i <= m; i++ {
-		zname := fmt.Sprintf("z%02d", i)
-		if !check1z(i, zname) {
-			return false
-		}
-	}
-	return true
-}
-
 func tobool(x int) bool {
 	return x != 0
 }
@@ -266,20 +184,6 @@ func run(V map[string]int) int {
 	return z
 }
 
-func runint(x, y int64) (map[string]int, int) {
-	V := make(map[string]int)
-	towires(V, x, "x")
-	towires(V, y, "y")
-	return V, run(V)
-}
-
-func towires(V map[string]int, n int64, pfx string) {
-	for i := range 45 {
-		V[fmt.Sprintf("%s%02d", pfx, i)] = int(n % 2)
-		n /= 2
-	}
-}
-
 func findnode(r string) int {
 	for i := range G {
 		if G[i].r == r {
@@ -287,41 +191,6 @@ func findnode(r string) int {
 		}
 	}
 	panic("not found")
-}
-
-func subgraph(r string) Set[int] {
-	m := make(Set[int])
-	subgraphm(r, m)
-	return m
-}
-
-func subgraphm(r string, m Set[int]) {
-	if r[0] == 'x' || r[0] == 'y' {
-		return
-	}
-	i := findnode(r)
-	m[i] = true
-	n := G[i]
-	subgraphm(n.a1, m)
-	subgraphm(n.a2, m)
-}
-
-func subgraph2string(v Set[int]) []string {
-	r := []string{}
-	for i := range v {
-		r = append(r, G[i].String())
-	}
-	return r
-}
-
-func (n *node) String() string {
-	return fmt.Sprintf("%s %s %s -> %s", n.a1, n.op, n.a2, n.r)
-}
-
-func swap(i, j int) {
-	n1 := G[i]
-	n2 := G[j]
-	n1.r, n2.r = n2.r, n1.r
 }
 
 func hasloop() bool {

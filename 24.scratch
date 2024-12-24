@@ -1,0 +1,6 @@
+carry1 = btn:OR(kbq:AND(x01, y01), drw:AND(sgr:XOR(x01, y01), carry0))
+carry2 = OR(AND(x02, y02), ghg:AND(sgv:XOR(x02, y02), carry1))
+carry3 = whq:OR(fcv:AND(x03, y03), wmt:AND(sng:XOR(x03, y03), carry2))
+
+z01 = XOR(carry0, inxor[1])
+z02 = XOR(carry1, inxor[2])

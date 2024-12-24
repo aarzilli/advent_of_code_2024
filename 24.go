@@ -4,6 +4,8 @@ import (
 	. "aoc/util"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 )
 
 type node struct {
@@ -55,37 +57,158 @@ func main() {
 
 	// 45bit + 45bit -> 46bit
 
-	/*
+	// 122, 10, 136, 170, 105, 48, 193
 
-		Pln("subgraph of z00", subgraph2string(subgraph("z00")))
+	//swap(10, 105) // should be 10, 48 probably (but it could also be others)
 
-		correct := make(Set[int])
+	//swap(105, 193)
 
-		// 122, 10, 136, 170, 105, 48, 193
+	//fix()
 
-		swap(10, 105) // should be 10, 48 probably (but it could also be others)
+	swapnames("z08", "vvr")
+	swapnames("bkr", "rnq")
+	swapnames("z28", "tfb")
+	swapnames("z39", "mqh")
 
-		for i := range 45 {
-			zname := fmt.Sprintf("z%02d", i)
-			V1, _ := runint(1<<i, 0)
-			ok1 := V1[zname] == 1
-			V2, _ := runint(0, 1<<i)
-			ok2 := V2[zname] == 1
-			if !ok1 || !ok2 {
-				Pln("failure at bit", i)
-				//TODO: print subgraph of z<i> that could be incorrect
-				for i := range subgraph(zname) {
-					if !correct[i] {
-						Pln("swap candidate", i, G[i])
+	inand := make([]string, 45)
+	inxor := make([]string, 45)
+
+	for i := range 45 {
+		inand[i] = findnodeshape(wirename("x", i), "AND", wirename("y", i)).r
+		inxor[i] = findnodeshape(wirename("x", i), "XOR", wirename("y", i)).r
+	}
+
+	precarryand := make([]string, 45)
+	carry := make([]string, 45)
+	carry[0] = inand[0]
+
+	for i := 1; i < 45; i++ {
+		// carry[i] e` OR(AND(x[i], y[i]), AND(XOR(x[i], y[i]), carry[i-1]))
+		// carry[i] e` OR(inand[i], AND(xor(x[i], y[i]), carry[i-1]))
+		// carry[i] e` OR(inand[i], precarryand[i])
+
+		// precarryand[i] e` AND(xor(x[i], y[i]), carry[i-1])
+		// precarryand[i] e` AND(inxor[i], carry[i-1])
+
+		precarryand[i] = findnodeshape(inxor[i], "AND", carry[i-1]).r
+		carry[i] = findnodeshape(inand[i], "OR", precarryand[i]).r
+		Pf("carry[%d] is %s from %s:AND(x%02d, y%02d) and %s:AND(...)\n", i, carry[i], inand[i], i, i, precarryand[i])
+	}
+
+	sort.Strings(swapped)
+	Sol(strings.Join(swapped, ","))
+}
+
+var swapped = []string{}
+
+func swapnames(a, b string) {
+	swapped = append(swapped, a, b)
+	for _, n := range G {
+		if n.r == a {
+			n.r = b
+		} else if n.r == b {
+			n.r = a
+		}
+	}
+}
+
+func wirename(pfx string, i int) string {
+	return fmt.Sprintf("%s%02d", pfx, i)
+}
+
+func findnodeshape(a1, op, a2 string) *node {
+	var r *node
+	cand := func(n *node) {
+		if r != nil {
+			panic(fmt.Errorf("duplicate noe '%s %s %s", a1, op, a2))
+		}
+		r = n
+	}
+	for _, n := range G {
+		if n.a1 == a1 && n.op == op && n.a2 == a2 {
+			cand(n)
+		}
+		if n.a2 == a1 && n.op == op && n.a1 == a2 {
+			cand(n)
+		}
+	}
+	if r != nil {
+		return r
+	}
+	panic(fmt.Errorf("could not find node '%s %s %s'", a1, op, a2))
+}
+
+func fix() bool {
+	Pln("FIX ENTERED")
+	defer Pln("FIX EXITING")
+	correct := make(Set[int])
+
+	for curbit := range 45 {
+		zname := fmt.Sprintf("z%02d", curbit)
+		if !check1z(curbit, zname) {
+			Pln("failure at bit", curbit)
+			//TODO: print subgraph of z<i> that could be incorrect
+			candidates := []int{}
+			for i := range subgraph(zname) {
+				if !correct[i] {
+					candidates = append(candidates, i)
+				}
+			}
+
+			if recheckok(curbit) {
+				panic("FUCK")
+			}
+
+			Pln("candidates", candidates)
+
+			for i := range candidates {
+				for j := i + 1; j < len(candidates); j++ {
+					Pln("swapping", candidates[i], candidates[j])
+					swap(candidates[i], candidates[j])
+					recheckout := recheckok(curbit)
+					hasloopout := hasloop()
+					if recheckout && !hasloopout {
+						Pln("trying with swapped", candidates[i], candidates[j])
+						if fix() {
+							return true
+						}
+					} else {
+						Pln("    failed because recheck=", recheckout, "hasloop=", hasloopout)
+					}
+					swap(candidates[i], candidates[j])
+					if recheckok(curbit) {
+						panic("FUCK")
 					}
 				}
-				break
 			}
 
-			for i := range subgraph(zname) {
-				correct[i] = true
-			}
-		}*/
+			return false
+		}
+
+		for i := range subgraph(zname) {
+			correct[i] = true
+		}
+	}
+
+	return true
+}
+
+func check1z(i int, zname string) bool {
+	V1, _ := runint(1<<i, 0)
+	ok1 := V1[zname] == 1
+	V2, _ := runint(0, 1<<i)
+	ok2 := V2[zname] == 1
+	return ok1 && ok2
+}
+
+func recheckok(m int) bool {
+	for i := 0; i <= m; i++ {
+		zname := fmt.Sprintf("z%02d", i)
+		if !check1z(i, zname) {
+			return false
+		}
+	}
+	return true
 }
 
 func tobool(x int) bool {
@@ -133,7 +256,11 @@ func run(V map[string]int) int {
 	var z int
 	for i := 45; i >= 0; i-- {
 		z = z * 2
-		z += V[fmt.Sprintf("z%02d", i)]
+		w, ok := V[fmt.Sprintf("z%02d", i)]
+		if !ok {
+			return -1
+		}
+		z += w
 	}
 
 	return z
@@ -195,4 +322,35 @@ func swap(i, j int) {
 	n1 := G[i]
 	n2 := G[j]
 	n1.r, n2.r = n2.r, n1.r
+}
+
+func hasloop() bool {
+	for i := range 46 {
+		zname := fmt.Sprintf("z%02d", i)
+		if hasloopm(zname, make(Set[string])) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasloopm(r string, path Set[string]) bool {
+	if r[0] == 'x' || r[0] == 'y' {
+		return false
+	}
+	if path[r] {
+		return true
+	}
+
+	path[r] = true
+
+	n := G[findnode(r)]
+	if hasloopm(n.a1, path) {
+		return true
+	}
+	if hasloopm(n.a2, path) {
+		return true
+	}
+	delete(path, r)
+	return false
 }
